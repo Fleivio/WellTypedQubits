@@ -4,6 +4,7 @@ module Core.Observation
   , observeRef
   , observeN
   , module Core.QR
+  , Measureable
   ) where
 
 import           Core.QR
@@ -29,14 +30,19 @@ observeRef (QR ptr) = do
   writeIORef ptr (mkQV [(observResult, 1)])
   return observResult
 
+type Measureable a n s 
+  = (Basis (NList a s),
+    Basis (NList a (n - 1)), 
+    Basis a,
+    Basis (NList a (s - n)),
+    KnownNat n)
+
 -- indexed at 1
 observeN ::
      forall a s n. 
-     Basis (NList a s)
-  => Basis (NList a (n - 1)) 
-  => Basis a 
-  => Basis (NList a (s - n)) 
-  => ValidDecomposer '[n] s => QR a s 
+     Measureable a n s
+  => ValidDecomposer '[n] s 
+  => QR a s 
   -> SNat n
   -> IO (NList a 1)
 observeN (QR ptr) SNat = do

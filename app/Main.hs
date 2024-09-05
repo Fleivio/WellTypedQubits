@@ -6,4 +6,4 @@ import Quant
 
 main :: IO ()
 main = do
-  m1
+  m2

@@ -1,4 +1,4 @@
-module Gates.Gates(_h, _x, _z, _y, _p, _t, _s, _cnot, _toffoli, _fredkin, _swap) where
+module Gates.Gates(_h, _x, _z, _y, _p, _t, _s, _cnot, _cz, _toffoli, _fredkin, _swap) where
 
 import Core.Operator
 
@@ -43,6 +43,14 @@ _cnot = mkQop' [
       ((O:>I:>NNil, O:>I:>NNil), 1:+ 0),
       ((I:>O:>NNil, I:>I:>NNil), 1:+ 0),
       ((I:>I:>NNil, I:>O:>NNil), 1:+ 0)
+    ]
+
+_cz :: Qop Bit 2 2
+_cz = mkQop' [
+      ((O:>O:>NNil, O:>O:>NNil), 1:+ 0),
+      ((O:>I:>NNil, O:>I:>NNil), 1:+ 0),
+      ((I:>O:>NNil, I:>O:>NNil), 1:+ 0),
+      ((I:>I:>NNil, I:>I:>NNil), (-1):+ 0)
     ]
 
 _toffoli :: Qop Bit 3 3

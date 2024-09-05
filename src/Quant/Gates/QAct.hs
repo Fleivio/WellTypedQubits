@@ -1,12 +1,15 @@
-module Gates.QAct(QAct, h, cnot, entangle, x, y, z, p, t, s, toffoli, fredkin, swap, sample, measure, app, runQ) where
+module Gates.QAct(QAct, h, cnot, liftIO, entangle, x, y, z, p, t, s, cz, toffoli, fredkin, swap, sample, measure, app, runQ) where
 
 import Control.Monad.Reader
 import Gates.Gates
 import Core.Value
 import List.Key
 
+type QAct' :: [Natural] -> Natural -> Type -> Type
+type QAct' acs t a = ReaderT (Virt Bit acs t) IO a
+
 type QAct :: [Natural] -> Natural -> Type
-type QAct acs t = ReaderT (Virt Bit acs t) IO ()
+type QAct acs t = QAct' acs t ()
 
 runQ :: ValidDecomposer (CountTo t) t
   => Basis (NList Bit t)
@@ -30,6 +33,47 @@ app act = do
   let adapterQv = selectQ @newacs qv
   lift $ runReaderT act
                     adapterQv
+
+--------------------------------
+
+-- type Unroll :: [Natural] -> Type -> Constraint
+-- class Unroll ns t where
+--   type Params ns t :: Type
+
+--   unroll :: t -> Params ns t
+
+-- instance Unroll '[] t where
+--   type Params '[] t = t
+
+--   unroll :: t -> t
+--   unroll = id
+
+-- instance (Unroll ns t, KnownNat n) => Unroll (n ': ns) t where
+--   type Params (n ': ns) t = Key n -> Params ns t
+
+--   unroll :: t -> Key n -> Params ns t
+--   unroll t Key = unroll @ns t
+
+
+-- app' :: forall newacs acs t. 
+--   Unroll newacs (QAct acs t)
+--   => ValidDecomposer newacs (Length acs)
+--   => QAct (Select newacs acs) t 
+--   -> Params newacs (QAct acs t)
+-- app' act = unroll @newacs @(QAct acs t) $ do
+--   qv <- ask
+--   let adapterQv = selectQ @newacs qv
+--   lift $ runReaderT act
+--                     adapterQv
+
+-- entangle2 :: forall n1 n2 s.
+--   Basis (NList Bit s) 
+--   => ValidDecomposer '[n1, n2] s
+--   => ValidDecomposer (Select '[1,2] '[n1, n2]) s
+--   => ValidDecomposer '[n1] s
+--   => QAct '[n1, n2] s
+-- entangle2 = do
+--   app' cnot #1 #2
 
 --------------------------------
 
@@ -81,6 +125,12 @@ cnot :: forall n1 n2 s.
   => QAct '[n1, n2] s
 cnot = actQop @'[n1, n2] _cnot
 
+cz :: forall n1 n2 s.
+  Basis (NList Bit s) 
+  => ValidDecomposer '[n1, n2] s 
+  => QAct '[n1, n2] s
+cz = actQop @'[n1, n2] _cz
+
 entangle :: forall n1 n2 s.
   Basis (NList Bit s) 
   => ValidDecomposer '[n1, n2] s
@@ -114,12 +164,11 @@ sample = do
   liftIO $ printQ qr
 
 measure :: forall n acs s.
-  Basis (NList Bit s) 
-  => Basis (NList Bit (s - At acs n))
-  => Basis (NList Bit (At acs n - 1))
-  => KnownNat (At acs n)
+  Measureable Bit (At acs n) s
   => ValidDecomposer '[acs `At` n] s
-  => QAct acs s
+  => QAct' acs s Bit
 measure = do 
   qv <- ask
-  liftIO $ measureV qv (Key @n) >> return ()
+  liftIO $ do 
+    (k:>NNil) <- measureV qv (Key @n)
+    return k

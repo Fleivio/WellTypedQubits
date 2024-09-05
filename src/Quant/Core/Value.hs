@@ -57,10 +57,6 @@ appV f' (Virt (QR ptr)) = do
 measureV ::
     forall a s t n. 
     ValidDecomposer '[s `At` n] t
-    => Basis a
-    => Basis (NList a t)
-    => Basis (NList a (t - s `At` n))
-    => Basis (NList a (s `At` n - 1))
-    => KnownNat (s `At` n)
+    => Measureable a (s `At` n) t
     => Virt a s t -> Key n -> IO (NList a 1)
 measureV (Virt qr) Key = observeN qr (SNat @(s `At` n))
