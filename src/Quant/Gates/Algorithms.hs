@@ -5,11 +5,11 @@ import Core.Value
 import List.Key
 
 adder :: Basis (NList Bit t)
-  => ValidDecomposer '[n1, n2, carryIn, carryOut] t
-  => ValidDecomposer '[n1, n2, carryOut] t
-  => ValidDecomposer '[n2, carryIn] t
-  => ValidDecomposer '[n1, n2] t
-  => ValidDecomposer '[n2, carryIn, carryOut] t
+  => ValidSelector '[n1, n2, carryIn, carryOut] t
+  => ValidSelector '[n1, n2, carryOut] t
+  => ValidSelector '[n2, carryIn] t
+  => ValidSelector '[n1, n2] t
+  => ValidSelector '[n2, carryIn, carryOut] t
   => QAct '[n1, n2, carryIn, carryOut] t
 adder = do
   app @'[1,2,4] toffoli
@@ -19,9 +19,9 @@ adder = do
   app @'[1,2] cnot
 
 deutsch :: Basis (NList Bit t)
-  => ValidDecomposer '[n1, n2] t
-  => ValidDecomposer '[n1] t
-  => ValidDecomposer '[n2] t
+  => ValidSelector '[n1, n2] t
+  => ValidSelector '[n1] t
+  => ValidSelector '[n2] t
   => Measureable Bit n1 t
   => QAct '[n1, n2] t -> QAct '[n1, n2] t
 deutsch uf = do
@@ -35,12 +35,13 @@ deutsch uf = do
     I -> liftIO $ print "f is balanced"
 
 teleport :: Basis (NList Bit t)
-  => ValidDecomposer '[n1, n2, n3] t
-  => ValidDecomposer '[n1, n2] t
-  => ValidDecomposer '[n2, n3] t
-  => ValidDecomposer '[n1, n3] t
-  => ValidDecomposer '[n1] t
-  => ValidDecomposer '[n2] t
+  => ValidSelector '[n1, n2, n3] t
+  => ValidSelector '[n1, n2] t
+  => ValidSelector '[n2, n3] t
+  => ValidSelector '[n1, n3] t
+  => ValidSelector '[n1] t
+  => ValidSelector '[n2] t
+  => ValidSelector '[n3] t
   => Measureable Bit n1 t
   => Measureable Bit n2 t
   => QAct '[n1, n2, n3] t

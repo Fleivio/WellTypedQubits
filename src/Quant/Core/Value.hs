@@ -15,12 +15,12 @@ import List.Key
 type Virt :: Type -> [Natural] -> Natural -> Type
 
 data Virt a acs t where
-  Virt :: ValidDecomposer acs t => QR a t -> Virt a acs t
+  Virt :: ValidSelector acs t => QR a t -> Virt a acs t
 
-virtFromR :: ValidDecomposer (CountTo s) s => QR a s -> Virt a (CountTo s) s
+virtFromR :: ValidSelector (CountTo s) s => QR a s -> Virt a (CountTo s) s
 virtFromR = Virt
 
-mkQ :: ValidDecomposer (CountTo s) s =>
+mkQ :: ValidSelector (CountTo s) s =>
      Basis (NList a s) => [(NList a s, PA)] -> IO (Virt a (CountTo s) s)
 mkQ = fmap virtFromR . qrFromList
 
@@ -30,14 +30,14 @@ printQ (Virt qr) = do
 
 selectQ ::
   forall n a acs t. 
-    ValidDecomposer n (Length acs)
+    ValidSelector n (Length acs)
      => Virt a acs t -> Virt a (Select n acs) t
 selectQ = unsafeCoerce
 
 appV ::
      forall a acs s. Basis (NList a s)
   => Basis a 
-  => ValidDecomposer acs s
+  => ValidSelector acs s
   => Qop a (Length acs) (Length acs) -> Virt a acs s -> IO ()
 appV f' (Virt (QR ptr)) = do
   qv <- readIORef ptr
@@ -56,7 +56,7 @@ appV f' (Virt (QR ptr)) = do
 
 measureV ::
     forall a s t n. 
-    ValidDecomposer '[s `At` n] t
-    => Measureable a (s `At` n) t
+    ValidSelector '[Eval (s !! n)] t
+    => Measureable a (Eval (s !! n)) t
     => Virt a s t -> Key n -> IO (NList a 1)
-measureV (Virt qr) Key = observeN qr (SNat @(s `At` n))
+measureV (Virt qr) Key = observeN qr (SNat @(Eval (s !! n)))

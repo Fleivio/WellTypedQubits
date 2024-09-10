@@ -19,9 +19,9 @@ import Gates.QAct
 
 test :: forall n1 n2 n3 t.   
   Basis (NList Bit t) 
-  => ValidDecomposer '[n1, n2, n3] t
-  => ValidDecomposer '[n1, n2] t
-  => ValidDecomposer '[n1] t
+  => ValidSelector '[n1, n2, n3] t
+  => ValidSelector '[n1, n2] t
+  => ValidSelector '[n1] t
   => Measureable Bit n1 t
   => QAct '[n1, n2, n3] t
 test = do

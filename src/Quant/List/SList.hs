@@ -3,16 +3,22 @@ module List.SList
     module Data.Kind
   , module GHC.TypeLits
   , module Data.Type.Equality,
-  Eval, CountTo, Select, ToListOfInts(..), EVPS, Length, SubsetValid
+  CountTo, Select, ToListOfInts(..), ValidSelector, Length, type (!!), Eval
   ) where
 
 import           Data.Kind
 import           Data.Proxy
 import           Data.Type.Equality
-import           Fcf                hiding (type (+), type (-),
+import           Fcf                hiding (type (+), Length, type (-),
                                      type (<=))
 import Fcf.Data.List(Cons)
 import           GHC.TypeLits
+
+
+type family Length (as :: [a]) :: Natural
+ where
+  Length '[]      = 0
+  Length (a : as) = 1 + Length as
 
 class ToListOfInts (as :: [Natural]) where
   toListOfInts :: [Int]
@@ -50,8 +56,10 @@ data HasZero :: [Natural] -> Exp Bool
 type instance Eval (HasZero '[]) = 'False
 type instance Eval (HasZero (x ': xs)) = If (x == 0) 'True (Eval (HasZero xs))
 
-data CountTo :: Natural -> Exp [Natural]
-type instance Eval (CountTo n) = CountToImpl n
+data ECountTo :: Natural -> Exp [Natural]
+type instance Eval (ECountTo n) = CountToImpl n
+
+type CountTo (n :: Natural) = Eval (ECountTo n)
 
 type family CountToImpl (n :: Natural) :: [Natural]
  where
@@ -66,23 +74,19 @@ type instance Eval (PowerSet (x ': xs))
 data (!!) :: [s] -> Natural -> Exp s
 type instance Eval ('[] !! n) = TypeError (Text "Index out of bounds")
 type instance Eval ((x ': xs) !! n) 
-  = If (n == 0) x (Eval (xs !! (n - 1)))
+  = If (n == 1) x (Eval (xs !! (n - 1)))
 
-data Select :: [s] -> [Natural] -> Exp [s]
-type instance Eval (Select '[] ns) = '[]
-type instance Eval (Select (x ': xs) ns) = Eval (ns !! x) ': Eval (Select xs ns)
+data ESelect :: [s] -> [Natural] -> Exp [s]
+type instance Eval (ESelect '[] ns) = '[]
+type instance Eval (ESelect (x ': xs) ns) = Eval (ns !! x) ': Eval (ESelect xs ns)
 
-data ValidSelector :: Natural -> [Natural] -> Exp Constraint
-type instance Eval (ValidSelector size acs)
+type Select acs ns = Eval (ESelect acs ns)
+
+data EValidSelector :: Natural -> [Natural] -> Exp Constraint
+type instance Eval (EValidSelector size acs)
   = Eval (Constraints [Eval (Maximum acs) <= size,
                        Eval (HasZero acs) ~ False,
                        Eval (HasRepetition acs) ~ False,
                        ToListOfInts acs])
 
-data ValidPowersetSelector :: [Natural] -> Natural -> Exp Constraint
-type instance Eval (ValidPowersetSelector acs size) =
-  Eval (Constraints =<< Map (ValidSelector size) (Eval (PowerSet acs)))
-
--- Evaluated Valid Powerset Selector 
-type EVPS acs l = (Eval (ValidPowersetSelector acs l), ToListOfInts acs)
-type SubsetValid acs nacs l = (EVPS acs l, EVPS (Eval (Select nacs acs)) l, EVPS nacs (Eval (Length acs)))
+type ValidSelector acs size = Eval (EValidSelector size acs)

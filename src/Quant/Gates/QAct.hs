@@ -11,21 +11,21 @@ type QAct' acs t a = ReaderT (Virt Bit acs t) IO a
 type QAct :: [Natural] -> Natural -> Type
 type QAct acs t = QAct' acs t ()
 
-runQ :: ValidDecomposer (CountTo t) t
+runQ :: ValidSelector (CountTo t) t
   => Basis (NList Bit t)
   => QAct (CountTo t) t -> Virt Bit (CountTo t) t  -> IO ()
 runQ = runReaderT 
 
 actQop ::
      forall acs s. Basis (NList Bit s)
-  => ValidDecomposer acs s
+  => ValidSelector acs s
   => Qop Bit (Length acs) (Length acs) -> QAct acs s
 actQop f' = do
   vv <- ask
   lift $ appV f' vv
 
 app :: forall newacs acs t. 
-  ValidDecomposer newacs (Length acs)
+  ValidSelector newacs (Length acs)
   => QAct (Select newacs acs) t 
   -> QAct acs t
 app act = do
@@ -57,7 +57,7 @@ app act = do
 
 -- app' :: forall newacs acs t. 
 --   Unroll newacs (QAct acs t)
---   => ValidDecomposer newacs (Length acs)
+--   => ValidSelector newacs (Length acs)
 --   => QAct (Select newacs acs) t 
 --   -> Params newacs (QAct acs t)
 -- app' act = unroll @newacs @(QAct acs t) $ do
@@ -68,9 +68,9 @@ app act = do
 
 -- entangle2 :: forall n1 n2 s.
 --   Basis (NList Bit s) 
---   => ValidDecomposer '[n1, n2] s
---   => ValidDecomposer (Select '[1,2] '[n1, n2]) s
---   => ValidDecomposer '[n1] s
+--   => ValidSelector '[n1, n2] s
+--   => ValidSelector (Select '[1,2] '[n1, n2]) s
+--   => ValidSelector '[n1] s
 --   => QAct '[n1, n2] s
 -- entangle2 = do
 --   app' cnot #1 #2
@@ -79,62 +79,63 @@ app act = do
 
 x :: forall n s.
   Basis (NList Bit s) 
-  => ValidDecomposer '[n] s 
+  => ValidSelector '[n] s 
   => QAct '[n] s
 x = actQop @'[n] _x
 
 y :: forall n s.
   Basis (NList Bit s) 
-  => ValidDecomposer '[n] s 
+  => ValidSelector '[n] s 
   => QAct '[n] s
 y = actQop @'[n] _y
 
 z :: forall n s.
   Basis (NList Bit s) 
-  => ValidDecomposer '[n] s 
+  => ValidSelector '[n] s 
   => QAct '[n] s
 z = actQop @'[n] _z
 
 p :: forall n s.
   Basis (NList Bit s) 
-  => ValidDecomposer '[n] s 
+  => ValidSelector '[n] s 
   => Double -> QAct '[n] s
 p l = actQop @'[n] (_p l)
 
 t :: forall n s.
   Basis (NList Bit s) 
-  => ValidDecomposer '[n] s 
+  => ValidSelector '[n] s 
   => QAct '[n] s
 t = actQop @'[n] _t
 
 s :: forall n s.
   Basis (NList Bit s) 
-  => ValidDecomposer '[n] s 
+  => ValidSelector '[n] s 
   => QAct '[n] s
 s = actQop @'[n] _s
 
 h :: forall n s.
   Basis (NList Bit s) 
-  => ValidDecomposer '[n] s 
+  => ValidSelector '[n] s 
   => QAct '[n] s
 h = actQop @'[n] _h
 
 cnot :: forall n1 n2 s.
   Basis (NList Bit s) 
-  => ValidDecomposer '[n1, n2] s 
+  => ValidSelector '[n1, n2] s 
   => QAct '[n1, n2] s
 cnot = actQop @'[n1, n2] _cnot
 
 cz :: forall n1 n2 s.
   Basis (NList Bit s) 
-  => ValidDecomposer '[n1, n2] s 
+  => ValidSelector '[n1, n2] s 
   => QAct '[n1, n2] s
 cz = actQop @'[n1, n2] _cz
 
 entangle :: forall n1 n2 s.
   Basis (NList Bit s) 
-  => ValidDecomposer '[n1, n2] s
-  => ValidDecomposer '[n1] s -- fix that
+  => ValidSelector '[n1, n2] s
+  => ValidSelector '[n1] s -- fix that
+  => ValidSelector '[n2] s -- fix that
   => QAct '[n1, n2] s
 entangle = do
   app @'[1] h
@@ -142,19 +143,19 @@ entangle = do
 
 fredkin :: forall n1 n2 n3 s.
   Basis (NList Bit s) 
-  => ValidDecomposer '[n1, n2, n3] s 
+  => ValidSelector '[n1, n2, n3] s 
   => QAct '[n1, n2, n3] s
 fredkin = actQop @'[n1, n2, n3] _fredkin
 
 toffoli :: forall n1 n2 n3 s.
   Basis (NList Bit s) 
-  => ValidDecomposer '[n1, n2, n3] s 
+  => ValidSelector '[n1, n2, n3] s 
   => QAct '[n1, n2, n3] s
 toffoli = actQop @'[n1, n2, n3] _toffoli
 
 swap :: forall n1 n2 s.
   Basis (NList Bit s) 
-  => ValidDecomposer '[n1, n2] s 
+  => ValidSelector '[n1, n2] s 
   => QAct '[n1, n2] s
 swap = actQop @'[n1, n2] _swap
 
@@ -164,8 +165,8 @@ sample = do
   liftIO $ printQ qr
 
 measure :: forall n acs s.
-  Measureable Bit (At acs n) s
-  => ValidDecomposer '[acs `At` n] s
+  Measureable Bit (Eval (acs !! n)) s
+  => ValidSelector '[Eval (acs !! n)] s
   => QAct' acs s Bit
 measure = do 
   qv <- ask

@@ -41,7 +41,7 @@ type Measureable a n s
 observeN ::
      forall a s n. 
      Measureable a n s
-  => ValidDecomposer '[n] s 
+  => ValidSelector '[n] s 
   => QR a s 
   -> SNat n
   -> IO (NList a 1)
