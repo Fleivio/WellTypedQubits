@@ -4,6 +4,7 @@ module List.SList
   , module GHC.TypeLits
   , module Data.Type.Equality,
   CountTo, Select, ToListOfInts(..), ValidSelector, Length, type (!!), Eval
+  , DropAt
   ) where
 
 import           Data.Kind
@@ -11,7 +12,7 @@ import           Data.Proxy
 import           Data.Type.Equality
 import           Fcf                hiding (type (+), Length, type (-),
                                      type (<=))
-import Fcf.Data.List(Cons)
+import Fcf.Data.List hiding (Length, Elem)
 import           GHC.TypeLits
 
 
@@ -72,7 +73,7 @@ type instance Eval (PowerSet (x ': xs))
   = Eval ( (++) (Eval (PowerSet xs)) =<< (Map (Cons x) =<< PowerSet xs))
 
 data (!!) :: [s] -> Natural -> Exp s
-type instance Eval ('[] !! n) = TypeError (Text "Index out of bounds")
+type instance Eval ('[] !! n) = Stuck
 type instance Eval ((x ': xs) !! n) 
   = If (n == 1) x (Eval (xs !! (n - 1)))
 
@@ -82,11 +83,43 @@ type instance Eval (ESelect (x ': xs) ns) = Eval (ns !! x) ': Eval (ESelect xs n
 
 type Select acs ns = Eval (ESelect acs ns)
 
+data DropAt :: Natural -> [s] -> Exp [s]
+type instance Eval (DropAt n xs) = Eval (Eval (Take n xs) ++ Eval (Drop (n + 1) xs))
+
+----------------------------------------------------------------
+
+type BoundCheck (n :: Natural) (xs :: [Natural]) 
+  = If (Eval (Maximum xs) <=? n) (() :: Constraint) 
+    (TypeError (
+        Text "Index out of bounds on Qubit selection" 
+        :$$: 
+        Text "You got " :<>: ShowType n :<>: Text " qubits" :$$: Text "But tried to select qubits " :<>: ShowType xs
+        ))
+
+type NoCloningCheck (xs :: [Natural]) 
+  = If (Eval (HasRepetition xs)) 
+    (TypeError (
+        Text "No Cloning Theorem Violation" 
+        :$$: 
+        Text "You tried to select qubits with repetition " :<>: ShowType xs
+        ))
+    (() :: Constraint) 
+
+type NoZeroCheck (xs :: [Natural]) 
+  = If (Eval (HasZero xs)) 
+    (TypeError (
+        Text "Zero qubit selection is not allowed" 
+        :$$:
+        Text "The qubit selection list starts from 1"
+        ))
+    (() :: Constraint)
+
 data EValidSelector :: Natural -> [Natural] -> Exp Constraint
 type instance Eval (EValidSelector size acs)
-  = Eval (Constraints [Eval (Maximum acs) <= size,
-                       Eval (HasZero acs) ~ False,
-                       Eval (HasRepetition acs) ~ False,
+  = Eval (Constraints [BoundCheck size acs,
+                       NoCloningCheck acs,
+                       NoZeroCheck acs,
                        ToListOfInts acs])
 
 type ValidSelector acs size = Eval (EValidSelector size acs)
+
